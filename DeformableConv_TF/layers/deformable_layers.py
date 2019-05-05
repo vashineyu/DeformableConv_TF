@@ -78,7 +78,7 @@ class DeformableConvLayer(layers.Conv2D):
 
         # create offset conv layer
         offset_num = self.kernel_size[0] * self.kernel_size[1] * self.num_deformable_group
-        print("offset_num: %s" % offset_num)
+        #print("offset_num: %s" % offset_num)
         self.offset_layer_kernel = self.add_weight(
             name='offset_layer_kernel',
             shape=self.kernel_size + (input_dim, offset_num * 2),  # 2 means x and y axis
@@ -127,7 +127,7 @@ class DeformableConvLayer(layers.Conv2D):
         y, x = [tf.tile(i, [batch_size, 1, 1, 1, self.num_deformable_group]) for i in [y, x]] # make batch_dim and filter_dim equal to kernel
         y, x = [tf.reshape(i, [*i.shape[0: 3], -1]) for i in [y, x]]
         y, x = [tf.to_float(i) for i in [y, x]]
-        print(y, x)
+        #print(y, x)
         # add offset
         y, x = y + y_off, x + x_off
         y = tf.clip_by_value(y, 0, in_h - 1)

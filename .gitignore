@@ -2,9 +2,14 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.ipynb_checkpoints
+*.ipynb_checkpoints
+.ipynb_checkpoints/
 # C extensions
 *.so
+
+#
+*.h5
+*.h5df
 
 # Distribution / packaging
 .Python
