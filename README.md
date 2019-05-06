@@ -3,9 +3,9 @@ Implementation of DeformableConv Layer in Tensorflow-Keras
 modified from https://github.com/DHZS/tf-deformable-conv-layer
 
 # Main requirements
-tensorflow v1.13
-yacs
-imgaug
+tensorflow v1.13  
+yacs  
+imgaug  
 
 # Usage
 We use yacs.config to control parameter setting  
