@@ -82,3 +82,5 @@ tst_pred = model.predict(x_test, verbose=1)
 
 testset_accuracy = np.sum(tst_pred.argmax(axis=1) == y_test.argmax(axis=1)) / len(y_test)
 print("Test accuracy: {:.4f}".format(testset_accuracy))
+
+model.save("./model.h5")
