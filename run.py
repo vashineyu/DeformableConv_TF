@@ -62,7 +62,8 @@ print(x_valid.shape)
 
 model = build_model(input_shape=x_valid.shape[1:], 
                     output_num=y_valid.shape[-1], 
-                    use_deformable=cfg.MODEL.USE_DEFORMABLE_CONV)
+                    use_deformable=cfg.MODEL.USE_DEFORMABLE_CONV,
+                    num_deform_group=cfg.MODEL.NUM_DEFORM_GROUP)
 optim = tf.keras.optimizers.SGD(lr=cfg.MODEL.LEARNING_RATE, nesterov=True, momentum=0.95)
 #optim = tf.keras.optimizers.Adam(lr=cfg.MODEL.LEARNING_RATE)
 model.compile(loss="categorical_crossentropy", metrics=["acc"], optimizer=optim)

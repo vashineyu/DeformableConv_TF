@@ -50,13 +50,14 @@ class DeformableConvLayer(layers.Conv2D):
         self.offset_layer_bias = None
         if num_deformable_group is None:
             num_deformable_group = filters
+        print(num_deformable_group)
         if filters % num_deformable_group != 0:
             raise ValueError('"filters" mod "num_deformable_group" must be zero')
         self.num_deformable_group = num_deformable_group
 
     def build(self, input_shape):
         input_dim = int(input_shape[-1])
-        #kernel_shape = self.kernel_size + (input_dim, self.filters)
+        
         # we want to use depth-wise conv
         kernel_shape = self.kernel_size + (self.filters * input_dim, 1)
         self.kernel = self.add_weight(
@@ -175,7 +176,9 @@ class DeformableConvLayer(layers.Conv2D):
         # depth-wise conv
         #print(pixels)
         #print(self.kernel)
+        
         out = tf.nn.depthwise_conv2d(pixels, self.kernel, [1, filter_h, filter_w, 1], 'VALID')
+        
         # add the output feature maps in the same group
         out = tf.reshape(out, [-1, out_h, out_w, self.filters, channel_in])
         out = tf.reduce_sum(out, axis=-1)
