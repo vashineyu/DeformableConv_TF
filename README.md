@@ -1,11 +1,10 @@
 # DeformableConv_TF
-Implementation of DeformableConv Layer in Tensorflow-Keras
-modified from https://github.com/DHZS/tf-deformable-conv-layer
+Implementation of DeformableConv Layer in Tensorflow-Keras  
+the deformable layer is modified from https://github.com/DHZS/tf-deformable-conv-layer  
+The main modificaion is that we make the layer can support static graph (which doesn't need Eager execution)  
 
-# Main requirements
-tensorflow v1.13  
-yacs  
-imgaug  
+# Installation
+Dependcies see requirements.txt. If all packages were installed, just run the code!  
 
 # Usage
 We use yacs.config to control parameter setting  
