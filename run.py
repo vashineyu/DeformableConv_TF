@@ -60,7 +60,9 @@ dataloader = DataLoader(dataset=dataset_train, batch_size=cfg.MODEL.BATCH_SIZE)
 x_valid, y_valid = next(iter(DataLoader(dataset_valid, batch_size=len(dataset_valid))))
 print(x_valid.shape)
 
-model = build_model(input_shape=x_valid.shape[1:], output_num=y_valid.shape[-1], use_deformable=False)
+model = build_model(input_shape=x_valid.shape[1:], 
+                    output_num=y_valid.shape[-1], 
+                    use_deformable=cfg.MODEL.USE_DEFORMABLE_CONV)
 optim = tf.keras.optimizers.SGD(lr=cfg.MODEL.LEARNING_RATE, nesterov=True, momentum=0.95)
 #optim = tf.keras.optimizers.Adam(lr=cfg.MODEL.LEARNING_RATE)
 model.compile(loss="categorical_crossentropy", metrics=["acc"], optimizer=optim)

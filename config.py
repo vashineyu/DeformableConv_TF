@@ -11,6 +11,7 @@ _C.MODEL.LEARNING_RATE = 0.001
 _C.MODEL.OPTIMIZER = "SGD"
 _C.MODEL.EPOCHS = 100
 _C.MODEL.BATCH_SIZE = 256
+_C.MODEL.USE_DEFORMABLE_CONV = False
 
 def get_cfg_defaults():
     return _C.clone()

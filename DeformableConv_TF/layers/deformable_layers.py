@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.keras import backend as K
 from tensorflow.python.keras import layers
 from tensorflow import nn
 
@@ -55,7 +56,7 @@ class DeformableConvLayer(layers.Conv2D):
 
     def build(self, input_shape):
         input_dim = int(input_shape[-1])
-        # kernel_shape = self.kernel_size + (input_dim, self.filters)
+        #kernel_shape = self.kernel_size + (input_dim, self.filters)
         # we want to use depth-wise conv
         kernel_shape = self.kernel_size + (self.filters * input_dim, 1)
         self.kernel = self.add_weight(
@@ -111,7 +112,7 @@ class DeformableConvLayer(layers.Conv2D):
         inputs = self._pad_input(inputs)
 
         # some length
-        batch_size = inputs.get_shape().as_list()[0]
+        batch_size = K.shape(offset)[0]
         channel_in = inputs.get_shape().as_list()[-1]
         in_h, in_w = inputs.get_shape().as_list()[1:3]  # input feature map size
         out_h, out_w = offset.get_shape().as_list()[1:3]  # output feature map size
@@ -122,12 +123,15 @@ class DeformableConvLayer(layers.Conv2D):
         y_off, x_off = offset[:, :, :, :, 0], offset[:, :, :, :, 1]
 
         # input feature map gird coordinates
-        y, x = self._get_conv_indices([in_h, in_w]) # [1, out_h, out_w, filter_h * filter_w]
+        y, x = self._get_conv_indices([in_h, in_w]) # [1, out_h, out_w, filter_h*filter_w]
         y, x = [tf.expand_dims(i, axis=-1) for i in [y, x]]
+        
         y, x = [tf.tile(i, [batch_size, 1, 1, 1, self.num_deformable_group]) for i in [y, x]] # make batch_dim and filter_dim equal to kernel
-        y, x = [tf.reshape(i, [*i.shape[0: 3], -1]) for i in [y, x]]
+        y, x = [tf.reshape(i, [K.shape(i)[0], *i.shape[1: 3], filter_h*filter_w*self.num_deformable_group]) for i in [y, x]]
         y, x = [tf.to_float(i) for i in [y, x]]
-        #print(y, x)
+        
+        
+        # print(y, x)
         # add offset
         y, x = y + y_off, x + x_off
         y = tf.clip_by_value(y, 0, in_h - 1)
@@ -154,7 +158,7 @@ class DeformableConvLayer(layers.Conv2D):
         w0, w1, w2, w3 = [tf.expand_dims(i, axis=-1) for i in [w0, w1, w2, w3]]
         # bilinear interpolation
         pixels = tf.add_n([w0 * p0, w1 * p1, w2 * p2, w3 * p3])
-
+        
         # reshape the "big" feature map
         pixels = tf.reshape(pixels, [batch_size, out_h, out_w, filter_h, filter_w, self.num_deformable_group, channel_in])
         pixels = tf.transpose(pixels, [0, 1, 3, 2, 4, 5, 6])
@@ -163,12 +167,17 @@ class DeformableConvLayer(layers.Conv2D):
         # copy channels to same group
         feat_in_group = self.filters // self.num_deformable_group
         pixels = tf.tile(pixels, [1, 1, 1, 1, feat_in_group])
+        #print("a", pixels)
+        #print(channel_in)
         pixels = tf.reshape(pixels, [batch_size, out_h * filter_h, out_w * filter_w, -1])
+        #print("b", pixels)
 
         # depth-wise conv
+        #print(pixels)
+        #print(self.kernel)
         out = tf.nn.depthwise_conv2d(pixels, self.kernel, [1, filter_h, filter_w, 1], 'VALID')
         # add the output feature maps in the same group
-        out = tf.reshape(out, [batch_size, out_h, out_w, self.filters, channel_in])
+        out = tf.reshape(out, [-1, out_h, out_w, self.filters, channel_in])
         out = tf.reduce_sum(out, axis=-1)
         if self.use_bias:
             out += self.bias
@@ -231,8 +240,19 @@ class DeformableConvLayer(layers.Conv2D):
         """
         y, x = indices
         batch, h, w, n = y.get_shape().as_list()[0: 4]
+        #batch = 32 if batch is None else batch
+        batch = K.shape(y)[0]
 
         batch_idx = tf.reshape(tf.range(0, batch), (batch, 1, 1, 1))
         b = tf.tile(batch_idx, (1, h, w, n))
         pixel_idx = tf.stack([b, y, x], axis=-1)
         return tf.gather_nd(inputs, pixel_idx)
+    
+    @staticmethod
+    def _rebuild_shape_to_batch(tensor_to_rebuild):
+        """In _get_pixel_values_at_point, batch dimension has already been set to stablize graph,
+        We convert it back to None for batch dim
+        """
+        new_shape = tf.TensorShape([None]).concatenate(tensor_to_rebuild.get_shape()[1:])
+        output = tf.placeholder_with_default(tensor_to_rebuild, shape=new_shape)
+        return output
