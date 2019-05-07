@@ -1,0 +1,7 @@
+MODEL:
+  BACKBONE: "R-50-v1"
+  USE_DEFORMABLE_CONV: True
+  BATCH_SIZE: 8
+
+DATASET:
+  SET: "cat-dog"

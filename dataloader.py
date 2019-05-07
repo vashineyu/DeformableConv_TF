@@ -52,7 +52,9 @@ class GetDataset():
         if self.counter % len(self.x) == 0:
             self._shuffle_item()
             
-        return img[:,:,np.newaxis], target
+        if len(img.shape) != 3:
+            img = img[:,:,np.newaxis]
+        return img, target
     
     def __next__(self):
         return self.__getitem__(self.counter)

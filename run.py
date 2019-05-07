@@ -7,10 +7,10 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from config import get_cfg_defaults
-from DeformableConv_TF.model import preproc_fn, build_model
+from DeformableConv_TF.model import preproc_fn, build_model, build_resnet_model
 from dataloader import GetDataset, DataLoader, TrainingAugmentation, TestingAugmentation
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.datasets.mnist import load_data
+from utils import Fetch_dataset
 
 parser = argparse.ArgumentParser(description="Cats/Dogs playground parameters")
 parser.add_argument(
@@ -40,8 +40,8 @@ devices = ",".join(str(i) for i in cfg.SYSTEM.DEVICES)
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = devices
 
-
-trainset, testset = load_data()
+dset = Fetch_dataset(dataset_name=cfg.DATASET.SET)
+trainset, testset = dset.load_data()
 x_train, y_train = trainset
 x_test, y_test = testset
 
@@ -50,9 +50,9 @@ idx_train, idx_valid = train_test_split(idx, test_size=0.1)
 x_train, x_valid = x_train[idx_train], x_train[idx_valid]
 y_train, y_valid = y_train[idx_train], y_train[idx_valid]
 
-dataset_train = GetDataset(x=x_train, y=y_train, num_classes=10, 
+dataset_train = GetDataset(x=x_train, y=y_train, num_classes=max(y_test)+1, 
                            preproc_fn=preproc_fn, augment_fn=TrainingAugmentation.augmentation)
-dataset_valid = GetDataset(x=x_valid, y=y_valid, num_classes=10, 
+dataset_valid = GetDataset(x=x_valid, y=y_valid, num_classes=max(y_test)+1, 
                            preproc_fn=preproc_fn, augment_fn=TestingAugmentation.augmentation)
 
 dataloader = DataLoader(dataset=dataset_train, batch_size=cfg.MODEL.BATCH_SIZE)
@@ -60,10 +60,18 @@ dataloader = DataLoader(dataset=dataset_train, batch_size=cfg.MODEL.BATCH_SIZE)
 x_valid, y_valid = next(iter(DataLoader(dataset_valid, batch_size=len(dataset_valid))))
 print(x_valid.shape)
 
-model = build_model(input_shape=x_valid.shape[1:], 
-                    output_num=y_valid.shape[-1], 
-                    use_deformable=cfg.MODEL.USE_DEFORMABLE_CONV,
-                    num_deform_group=cfg.MODEL.NUM_DEFORM_GROUP)
+if cfg.MODEL.BACKBONE == "":
+    model = build_model(input_shape=x_valid.shape[1:], 
+                        output_num=y_valid.shape[-1], 
+                        use_deformable=cfg.MODEL.USE_DEFORMABLE_CONV,
+                        num_deform_group=cfg.MODEL.NUM_DEFORM_GROUP)
+else:
+    model = build_resnet_model(input_shape=x_valid.shape[1:], 
+                               output_num=y_valid.shape[-1], 
+                               use_deformable=cfg.MODEL.USE_DEFORMABLE_CONV,
+                               num_deform_group=cfg.MODEL.NUM_DEFORM_GROUP,
+                               backbone=cfg.MODEL.BACKBONE)
+
 optim = tf.keras.optimizers.SGD(lr=cfg.MODEL.LEARNING_RATE, nesterov=True, momentum=0.95)
 #optim = tf.keras.optimizers.Adam(lr=cfg.MODEL.LEARNING_RATE)
 model.compile(loss="categorical_crossentropy", metrics=["acc"], optimizer=optim)
@@ -75,7 +83,7 @@ model.fit_generator(dataloader,
                     validation_data=(x_valid, y_valid))
 
 ## -- ##
-dataset_test = GetDataset(x=x_test, y=y_test, num_classes=10, 
+dataset_test = GetDataset(x=x_test, y=y_test, num_classes=max(y_test)+1, 
                           preproc_fn=preproc_fn, augment_fn=TestingAugmentation.augmentation)
 x_test, y_test = next(iter(DataLoader(dataset_test, batch_size=len(dataset_valid))))
 print(x_test.shape)

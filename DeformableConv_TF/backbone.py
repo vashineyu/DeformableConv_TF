@@ -7,6 +7,7 @@ from tensorflow.keras.layers import Layer, InputSpec
 from tensorflow.keras import initializers, regularizers, constraints
 from tensorflow.keras.utils import get_custom_objects
 import tensorflow.keras.backend as K
+from .layers.deformable_layers import DeformableConvLayer
 
 import os
 import warnings
@@ -40,7 +41,7 @@ WEIGHTS_HASHES = {
 
 ### ----------------- ###
 def block1(x, filters, kernel_size=3, stride=1,
-           conv_shortcut=True, name=None, norm_use="bn"):
+           conv_shortcut=True, name=None, norm_use="bn", use_deformable=False):
     """A residual block.
     # Arguments
         x: input tensor.
@@ -67,9 +68,16 @@ def block1(x, filters, kernel_size=3, stride=1,
     #x = layers.BatchNormalization(axis=bn_axis, epsilon=1.001e-5, name=name + '_1_bn')(x)
     x = normalize_layer(x, norm_use=norm_use, name=name+'_1_')
     x = layers.Activation('relu', name=name + '_1_relu')(x)
-
-    x = layers.Conv2D(filters, kernel_size, padding='SAME', kernel_initializer='he_normal',
-                      name=name + '_2_conv')(x)
+    
+    if use_deformable:
+        x = DeformableConvLayer(filters=filters, 
+                                kernel_size=kernel_size, 
+                                strides=(1,1), 
+                                padding="same", 
+                                num_deformable_group=filters//8)(x)
+    else:
+        x = layers.Conv2D(filters, kernel_size, padding='SAME', kernel_initializer='he_normal',
+                          name=name + '_2_conv')(x)
     x = normalize_layer(x, norm_use=norm_use, name=name+'_2_')
     #x = layers.BatchNormalization(axis=bn_axis, epsilon=1.001e-5, name=name + '_2_bn')(x)
     x = layers.Activation('relu', name=name + '_2_relu')(x)
@@ -83,7 +91,7 @@ def block1(x, filters, kernel_size=3, stride=1,
     return x
 
 
-def stack1(x, filters, blocks, stride1=2, name=None, norm_use="bn"):
+def stack1(x, filters, blocks, stride1=2, name=None, norm_use="bn", use_deformable=False):
     """A set of stacked residual blocks.
     # Arguments
         x: input tensor.
@@ -94,9 +102,9 @@ def stack1(x, filters, blocks, stride1=2, name=None, norm_use="bn"):
     # Returns
         Output tensor for the stacked blocks.
     """
-    x = block1(x, filters, stride=stride1, name=name + '_block1', norm_use=norm_use)
+    x = block1(x, filters, stride=stride1, name=name + '_block1', norm_use=norm_use, use_deformable=use_deformable)
     for i in range(2, blocks + 1):
-        x = block1(x, filters, conv_shortcut=False, name=name + '_block' + str(i), norm_use=norm_use)
+        x = block1(x, filters, conv_shortcut=False, name=name + '_block' + str(i), norm_use=norm_use, use_deformable=use_deformable)
     return x
 
 
@@ -386,12 +394,13 @@ def ResNet50(include_top=True,
              pooling=None,
              classes=1000,
              norm_use="bn",
+             use_deformable=False,
              **kwargs):
     def stack_fn(x):
         x = stack1(x, 64, 3, stride1=1, name='conv2', norm_use=norm_use)
         x = stack1(x, 128, 4, name='conv3', norm_use=norm_use)
         x = stack1(x, 256, 6, name='conv4', norm_use=norm_use)
-        x = stack1(x, 512, 3, name='conv5', norm_use=norm_use)
+        x = stack1(x, 512, 3, name='conv5', norm_use=norm_use, use_deformable=use_deformable)
         return x
     return ResNet(stack_fn, False, True, 'resnet50',
                   include_top, weights,
@@ -407,12 +416,13 @@ def ResNet101(include_top=True,
               pooling=None,
               classes=1000,
               norm_use="bn",
+              use_deformable=False,
               **kwargs):
     def stack_fn(x):
         x = stack1(x, 64, 3, stride1=1, name='conv2', norm_use=norm_use)
         x = stack1(x, 128, 4, name='conv3', norm_use=norm_use)
         x = stack1(x, 256, 23, name='conv4', norm_use=norm_use)
-        x = stack1(x, 512, 3, name='conv5', norm_use=norm_use)
+        x = stack1(x, 512, 3, name='conv5', norm_use=norm_use, use_deformable=use_deformable)
         return x
     return ResNet(stack_fn, False, True, 'resnet101',
                   include_top, weights,
