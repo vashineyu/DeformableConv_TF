@@ -40,6 +40,8 @@ devices = ",".join(str(i) for i in cfg.SYSTEM.DEVICES)
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = devices
 
+os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = str(int(cfg.SYSTEM.MIX_PRECISION))
+
 dset = Fetch_dataset(dataset_name=cfg.DATASET.SET)
 trainset, testset = dset.load_data()
 x_train, y_train = trainset
@@ -57,20 +59,21 @@ dataset_valid = GetDataset(x=x_valid, y=y_valid, num_classes=max(y_test)+1,
 
 dataloader = DataLoader(dataset=dataset_train, batch_size=cfg.MODEL.BATCH_SIZE)
 
-x_valid, y_valid = next(iter(DataLoader(dataset_valid, batch_size=len(dataset_valid))))
-print(x_valid.shape)
-
+""" Pre-occupy the gpu, prevent after loading data but found gpu has already been taken"""
 if cfg.MODEL.BACKBONE == "":
-    model = build_model(input_shape=x_valid.shape[1:], 
-                        output_num=y_valid.shape[-1], 
+    model = build_model(input_shape=(256,256,3), 
+                        output_num=2, 
                         use_deformable=cfg.MODEL.USE_DEFORMABLE_CONV,
                         num_deform_group=cfg.MODEL.NUM_DEFORM_GROUP)
 else:
-    model = build_resnet_model(input_shape=x_valid.shape[1:], 
-                               output_num=y_valid.shape[-1], 
+    model = build_resnet_model(input_shape=(256,256,3), 
+                               output_num=2, 
                                use_deformable=cfg.MODEL.USE_DEFORMABLE_CONV,
                                num_deform_group=cfg.MODEL.NUM_DEFORM_GROUP,
                                backbone=cfg.MODEL.BACKBONE)
+
+x_valid, y_valid = next(iter(DataLoader(dataset_valid, batch_size=len(dataset_valid))))
+print(x_valid.shape)
 
 optim = tf.keras.optimizers.SGD(lr=cfg.MODEL.LEARNING_RATE, nesterov=True, momentum=0.95)
 #optim = tf.keras.optimizers.Adam(lr=cfg.MODEL.LEARNING_RATE)
