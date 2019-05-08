@@ -87,7 +87,7 @@ dataset_test = GetDataset(x=x_test, y=y_test, num_classes=max(y_test)+1,
                           preproc_fn=preproc_fn, augment_fn=TestingAugmentation.augmentation)
 x_test, y_test = next(iter(DataLoader(dataset_test, batch_size=len(dataset_valid))))
 print(x_test.shape)
-tst_pred = model.predict(x_test, verbose=1)
+tst_pred = model.predict(x_test, verbose=1, batch_size=cfg.MODEL.INFERENCE_SIZE)
 
 testset_accuracy = np.sum(tst_pred.argmax(axis=1) == y_test.argmax(axis=1)) / len(y_test)
 print("Test accuracy: {:.4f}".format(testset_accuracy))
