@@ -72,13 +72,13 @@ else:
                                num_deform_group=cfg.MODEL.NUM_DEFORM_GROUP,
                                backbone=cfg.MODEL.BACKBONE)
 
-x_valid, y_valid = next(iter(DataLoader(dataset_valid, batch_size=len(dataset_valid))))
-print(x_valid.shape)
-
 optim = tf.keras.optimizers.SGD(lr=cfg.MODEL.LEARNING_RATE, nesterov=True, momentum=0.95)
 #optim = tf.keras.optimizers.Adam(lr=cfg.MODEL.LEARNING_RATE)
 model.compile(loss="categorical_crossentropy", metrics=["acc"], optimizer=optim)
 model.summary()
+
+x_valid, y_valid = next(iter(DataLoader(dataset_valid, batch_size=len(dataset_valid))))
+print(x_valid.shape)
 
 model.fit_generator(dataloader, 
                     epochs=cfg.MODEL.EPOCHS, 
